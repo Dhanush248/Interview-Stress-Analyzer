@@ -1,0 +1,294 @@
+.stress-analytics {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.analytics-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.4rem;
+}
+
+.reset-btn {
+  background: #FF5722;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.reset-btn:hover {
+  background: #E64A19;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.no-data p {
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.current-status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.status-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+}
+
+.status-card h4 {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stress-indicator,
+.confidence-indicator {
+  padding: 10px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.detection-status {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.status-item {
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-item.active {
+  background: #E8F5E8;
+  color: #2E7D32;
+}
+
+.status-item.inactive {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.probability-section {
+  margin-bottom: 25px;
+}
+
+.probability-section h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.probability-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.probability-bar {
+  display: grid;
+  grid-template-columns: 80px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+}
+
+.bar-container {
+  background: #e0e0e0;
+  border-radius: 10px;
+  height: 20px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.bar-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  text-align: right;
+}
+
+.charts-section {
+  margin-bottom: 25px;
+}
+
+.chart-container {
+  margin-bottom: 20px;
+}
+
+.chart-container h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.analysis-summary {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.analysis-summary h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.recommendations {
+  background: #fff3cd;
+  border-radius: 10px;
+  padding: 15px;
+  border-left: 4px solid #ffc107;
+}
+
+.recommendations h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.recommendation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recommendation {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.recommendation.high-stress {
+  background: #ffebee;
+  color: #c62828;
+  border-left: 3px solid #f44336;
+}
+
+.recommendation.low-confidence {
+  background: #fff3e0;
+  color: #ef6c00;
+  border-left: 3px solid #ff9800;
+}
+
+.recommendation.technical {
+  background: #e3f2fd;
+  color: #1565c0;
+  border-left: 3px solid #2196f3;
+}
+
+.recommendation.positive {
+  background: #e8f5e8;
+  color: #2e7d32;
+  border-left: 3px solid #4caf50;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .current-status {
+    grid-template-columns: 1fr;
+  }
+  
+  .probability-bar {
+    grid-template-columns: 70px 1fr 35px;
+    gap: 8px;
+  }
+  
+  .bar-label {
+    font-size: 11px;
+  }
+  
+  .summary-stats {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+  
+  .chart-container {
+    margin-bottom: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .probability-bar {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+  
+  .bar-value {
+    text-align: left;
+  }
+  
+  .summary-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
