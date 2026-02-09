@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import asyncio
 import json
 import base64
@@ -12,6 +13,10 @@ import struct
 from typing import Dict, List
 import logging
 from inference_engine import create_analyzer, analyze_multimodal
+from session_manager import session_manager
+from pdf_generator import pdf_generator
+from speech_analyzer import speech_analyzer
+from alert_system import alert_system
 import uvicorn
 
 # Configure logging
@@ -164,6 +169,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 await handle_audio_chunk(message, client_id)
             elif message["type"] == "multimodal_data":
                 await handle_multimodal_data(message, client_id)
+            elif message["type"] == "voice_confidence":
+                await handle_voice_confidence(message, client_id)
             elif message["type"] == "reset":
                 await handle_reset(client_id)
             else:
@@ -205,6 +212,50 @@ async def handle_video_frame(message: dict, client_id: str):
         results = stress_analyzer.analyze_frame(frame, audio_chunk)
         
         logger.info(f"Analysis results: {results}")
+        
+        # Get session and add data
+        session_id = message.get("session_id")
+        if session_id:
+            session = session_manager.get_session(session_id)
+            if session:
+                session.add_stress_data(results)
+                
+                # Check for alerts
+                alerts = alert_system.check_stress_alert(
+                    results.get('stress_level', 'Low Stress'),
+                    results.get('confidence_score', 0.5),
+                    results.get('face_detected', False)
+                )
+                
+                # Add alerts to session and send to client
+                for alert in alerts:
+                    session.add_alert(alert['type'], alert['message'])
+                    await manager.send_personal_message({
+                        "type": "alert",
+                        "data": alert
+                    }, client_id)
+                
+                # Speech analysis if audio available
+                if audio_chunk and len(audio_chunk) > 1000:
+                    audio_array = np.array(audio_chunk, dtype=np.float32)
+                    speech_metrics = speech_analyzer.analyze_audio(audio_array)
+                    if speech_metrics:
+                        session.add_speech_metric(speech_metrics)
+                        
+                        # Check speech alerts
+                        speech_alerts = alert_system.check_speech_alert(speech_metrics)
+                        for alert in speech_alerts:
+                            session.add_alert(alert['type'], alert['message'])
+                            await manager.send_personal_message({
+                                "type": "alert",
+                                "data": alert
+                            }, client_id)
+                        
+                        # Send speech metrics
+                        await manager.send_personal_message({
+                            "type": "speech_metrics",
+                            "data": speech_metrics
+                        }, client_id)
         
         # Send results back
         await manager.send_personal_message({
@@ -312,6 +363,20 @@ async def handle_reset(client_id: str):
             "message": str(e)
         }, client_id)
 
+async def handle_voice_confidence(message: dict, client_id: str):
+    """Handle voice confidence data from frontend"""
+    try:
+        session_id = message.get("session_id")
+        voice_data = message.get("data", {})
+        
+        if session_id:
+            session = session_manager.get_session(session_id)
+            if session:
+                session.add_voice_confidence(voice_data)
+                logger.info(f"Added voice confidence to session {session_id}: {voice_data.get('confidence', 0):.1f}%")
+    except Exception as e:
+        logger.error(f"Error handling voice confidence: {e}")
+
 @app.get("/stats")
 async def get_stats():
     """Get server statistics"""
@@ -320,6 +385,61 @@ async def get_stats():
         "connected_clients": list(manager.active_connections.keys()),
         "models_loaded": stress_analyzer is not None
     }
+
+# Session Management Endpoints
+@app.post("/session/start")
+async def start_session(data: dict):
+    """Start new interview session"""
+    session = session_manager.create_session(
+        data['session_id'],
+        data['interviewer'],
+        data['interviewee']
+    )
+    alert_system.reset()
+    speech_analyzer.reset()
+    return {"success": True, "session_id": session.session_id}
+
+@app.post("/session/end")
+async def end_session(data: dict):
+    """End interview session and get summary"""
+    summary = session_manager.end_session(data['session_id'])
+    if summary:
+        return {"success": True, "summary": summary}
+    return {"success": False, "message": "Session not found"}
+
+@app.get("/session/{session_id}/summary")
+async def get_session_summary(session_id: str):
+    """Get session summary"""
+    session = session_manager.get_completed_session(session_id)
+    if session:
+        return {"success": True, "summary": session.get_summary()}
+    return {"success": False, "message": "Session not found"}
+
+@app.post("/session/{session_id}/export-pdf")
+async def export_session_pdf(session_id: str):
+    """Export session as PDF report"""
+    session = session_manager.get_completed_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    try:
+        pdf_path = pdf_generator.generate_report(session.get_full_data())
+        return FileResponse(
+            pdf_path,
+            media_type='application/pdf',
+            filename=f"interview_report_{session_id}.pdf"
+        )
+    except Exception as e:
+        logger.error(f"Error generating PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/session/{session_id}/alerts")
+async def get_session_alerts(session_id: str):
+    """Get all alerts for a session"""
+    session = session_manager.get_session(session_id) or session_manager.get_completed_session(session_id)
+    if session:
+        return {"success": True, "alerts": session.alerts}
+    return {"success": False, "message": "Session not found"}
 
 # Additional utility endpoints
 @app.post("/test/dummy_analysis")

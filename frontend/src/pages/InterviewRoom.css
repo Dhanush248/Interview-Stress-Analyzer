@@ -44,6 +44,23 @@
   gap: 15px;
 }
 
+.end-interview-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.end-interview-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4);
+}
+
 .status-badge {
   display: flex;
   align-items: center;
@@ -253,6 +270,43 @@
 .send-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4);
+}
+
+.speech-metrics-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 16px;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.speech-metrics-card h4 {
+  margin: 0 0 16px 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.speech-metric {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.speech-metric:last-child {
+  border-bottom: none;
+}
+
+.speech-metric span {
+  color: #64748b;
+}
+
+.speech-metric strong {
+  color: #0f172a;
+  font-weight: 700;
 }
 
 @media (max-width: 1400px) {

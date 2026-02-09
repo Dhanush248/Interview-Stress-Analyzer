@@ -5,6 +5,50 @@ import './StressAnalytics.css';
 const StressAnalytics = ({ stressData, onReset }) => {
   const [historicalData, setHistoricalData] = useState([]);
   const [currentAnalysis, setCurrentAnalysis] = useState(null);
+  const [voiceConfidence, setVoiceConfidence] = useState(null);
+  const [voiceHistory, setVoiceHistory] = useState([]);
+  const [wsConnected, setWsConnected] = useState(false);
+
+  // WebSocket for voice confidence
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8002/ws/voice-confidence');
+    
+    ws.onopen = () => {
+      setWsConnected(true);
+      console.log('Voice confidence WebSocket connected');
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.confidence !== undefined) {
+        setVoiceConfidence(data);
+        
+        // Send voice confidence to backend via socket for session tracking
+        if (window.interviewSocket) {
+          window.interviewSocket.emit('voice-confidence-data', {
+            confidence: data.confidence,
+            stress_level: data.stress_level,
+            timestamp: data.timestamp
+          });
+        }
+        
+        setVoiceHistory(prev => {
+          const newPoint = {
+            time: new Date(data.timestamp).toLocaleTimeString(),
+            confidence: data.confidence,
+            timestamp: data.timestamp
+          };
+          return [...prev.slice(-20), newPoint];
+        });
+      }
+    };
+    
+    ws.onerror = () => setWsConnected(false);
+    ws.onclose = () => setWsConnected(false);
+    
+    return () => ws.close();
+  }, []);
 
   useEffect(() => {
     if (stressData) {
@@ -114,7 +158,22 @@ const StressAnalytics = ({ stressData, onReset }) => {
           </div>
         </div>
 
-        <div className="status-card confidence-card">
+        {voiceConfidence && (
+        <div className="status-card voice-card">
+          <div className="card-icon">🎤</div>
+          <div className="card-content">
+            <h4>Voice Confidence</h4>
+            <div 
+              className="confidence-indicator"
+              style={{ background: voiceConfidence.confidence >= 60 ? 'linear-gradient(135deg, #00d2ff, #3a7bd5)' : 'linear-gradient(135deg, #ef4444, #dc2626)' }}
+            >
+              {Math.round(voiceConfidence.confidence)}%
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="status-card confidence-card">
           <div className="card-icon">🎯</div>
           <div className="card-content">
             <h4>Confidence</h4>
@@ -190,7 +249,7 @@ const StressAnalytics = ({ stressData, onReset }) => {
         </div>
       )}
 
-      {historicalData.length > 1 && (
+      {/* {historicalData.length > 1 && (
         <div className="chart-card">
           <h4>💪 Confidence Trend</h4>
           <ResponsiveContainer width="100%" height={180}>
@@ -200,6 +259,21 @@ const StressAnalytics = ({ stressData, onReset }) => {
               <YAxis domain={[0, 100]} tick={{fontSize: 11}} stroke="#94a3b8" />
               <Tooltip formatter={(value) => [`${value}%`, 'Confidence']} />
               <Line type="monotone" dataKey="confidence" stroke="#00d2ff" strokeWidth={3} dot={{ fill: '#00d2ff', r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )} */}
+
+      {voiceHistory.length > 1 && (
+        <div className="chart-card">
+          <h4>🎤 Voice Confidence Trend</h4>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={voiceHistory}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="time" tick={{fontSize: 11}} stroke="#94a3b8" />
+              <YAxis domain={[0, 100]} tick={{fontSize: 11}} stroke="#94a3b8" />
+              <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, 'Voice Confidence']} />
+              <Line type="monotone" dataKey="confidence" stroke="#3a7bd5" strokeWidth={3} dot={{ fill: '#3a7bd5', r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>

@@ -36,3 +36,10 @@ pydantic>=2.5.0
 
 # Audio Feature Extraction
 wave>=0.0.2
+
+# PDF Generation & Reporting
+reportlab>=4.0.0
+
+# Speech Analysis
+speech-recognition>=3.10.0
+pydub>=0.25.1

@@ -12,6 +12,11 @@ This system enables real-time video interviews between interviewers and intervie
 - **AI-Powered Analysis**: Multimodal stress and confidence detection
 - **Privacy-First Design**: Analysis results visible only to interviewers
 - **Live Analytics Dashboard**: Real-time charts and recommendations
+- **Real-Time Alerts**: Instant notifications for high stress, low confidence, and behavioral patterns
+- **Speech Analysis**: Speaking pace and pause pattern detection
+- **Interview Summary Dashboard**: Comprehensive post-interview analytics
+- **PDF Report Export**: Professional interview reports with key metrics
+- **Voice Confidence Tracking**: Real-time voice-based confidence estimation
 - **Temporal Smoothing**: Stable predictions using rolling averages
 - **Cross-Platform Support**: Works on Windows, macOS, and Linux
 
@@ -77,6 +82,9 @@ setup_python.bat
 python -m venv ai_env
 ai_env\Scripts\activate
 pip install -r requirements.txt
+
+# Install additional dependencies for new features
+pip install reportlab>=4.0.0 SpeechRecognition>=3.10.0 pydub>=0.25.1 sounddevice>=0.4.6
 ```
 
 ### 3. Download Datasets (Optional - for training)
@@ -141,10 +149,11 @@ npm install
 # Option 1: Start everything at once
 start_full_system.bat
 
-# Option 2: Start services individually
-start_ai_backend.bat      # Terminal 1
-start_node_server.bat     # Terminal 2
-cd frontend && npm start  # Terminal 3
+# Option 2: Start services individually (4 terminals)
+start_ai_backend.bat                    # Terminal 1 - AI Server (port 8001)
+cd backend\ai_server\realtime && python realtime_stream_server.py  # Terminal 2 - Voice Confidence (port 8002)
+start_node_server.bat                   # Terminal 3 - Node Server (port 3000)
+cd frontend && npm start                # Terminal 4 - React Frontend (port 3001)
 ```
 
 ### 7. Access the Application
@@ -152,6 +161,76 @@ cd frontend && npm start  # Terminal 3
 - **Frontend**: http://localhost:3001
 - **Node.js Server**: http://localhost:3000
 - **AI Backend**: http://localhost:8001
+- **Voice Confidence Server**: http://localhost:8002
+
+## 🎯 New Features
+
+### 1. Real-Time Alert System
+
+**What it does**: Monitors stress levels and triggers instant alerts for:
+
+- Prolonged high stress (>30 seconds)
+- Low confidence detection
+- Low voice confidence
+- Face detection issues
+- Slow speaking pace
+- Excessive pauses
+
+**How to use**:
+
+1. Alerts appear automatically in top-right corner for interviewers
+2. Color-coded by severity (High/Medium/Low)
+3. Auto-dismiss after 8 seconds or click to close
+4. Cooldown period prevents alert spam
+
+### 2. Speech Pace & Pause Analysis
+
+**What it does**: Analyzes candidate's speech patterns:
+
+- Speaking pace (words per minute)
+- Pause duration and frequency
+- Speech-to-silence ratio
+
+**How to use**:
+
+1. Automatically analyzes audio during interview
+2. Displays in "Speech Analysis" card in analytics panel
+3. Updates every 2 seconds
+4. Provides interpretation (slow/normal/fast pace)
+
+### 3. Interview Summary Dashboard
+
+**What it does**: Comprehensive post-interview analytics:
+
+- Session information (duration, participants)
+- Key metrics (avg stress, confidence, voice confidence)
+- Stress distribution timeline
+- Alert history
+- Recommendations
+
+**How to use**:
+
+1. Click "End & View Summary" button (interviewer only)
+2. Review comprehensive metrics
+3. Download PDF report
+4. Share with HR/team
+
+### 4. PDF Report Export
+
+**What it does**: Generates professional PDF reports with:
+
+- Session details
+- Performance metrics
+- Stress distribution charts
+- Alert summary
+- AI-generated recommendations
+
+**How to use**:
+
+1. End interview session
+2. Click "Download PDF Report" in summary modal
+3. PDF saved to `backend/ai_server/reports/` folder
+4. Share via email or file system
 
 ## 📋 Usage Instructions
 
@@ -317,6 +396,10 @@ AI backend connection closed
 - `GET /api/rooms`: List active rooms
 - `POST /api/rooms/create`: Create new room
 - `GET /api/ai/test`: Test AI backend connection
+- `POST /api/session/start`: Start interview session
+- `POST /api/session/end`: End interview session
+- `GET /api/session/:sessionId/summary`: Get session summary
+- `GET /api/session/:sessionId/export-pdf`: Download PDF report
 
 ### Python AI Server Endpoints
 
@@ -325,6 +408,11 @@ AI backend connection closed
 - `POST /analyze/image`: Analyze single image
 - `POST /analyze/reset`: Reset analyzer history
 - `WebSocket /ws/{client_id}`: Real-time analysis
+- `POST /session/start`: Create new session
+- `POST /session/end`: End session and calculate stats
+- `GET /session/{session_id}/summary`: Get session summary
+- `POST /session/{session_id}/export-pdf`: Generate PDF report
+- `GET /session/{session_id}/alerts`: Get session alerts
 
 ### WebSocket Events
 
@@ -333,6 +421,8 @@ AI backend connection closed
 - `video-frame`: Send video frame for analysis
 - `audio-chunk`: Send audio data
 - `stress_analysis`: Receive analysis results
+- `real_time_alert`: Receive real-time alerts
+- `speech_metrics`: Receive speech analysis metrics
 
 ## 🎓 Academic Information
 

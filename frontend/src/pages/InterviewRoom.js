@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
+import axios from 'axios';
 import VideoCall from '../components/VideoCall';
 import StressAnalytics from '../components/StressAnalytics';
+import AlertContainer from '../components/AlertNotification';
+import InterviewSummary from '../components/InterviewSummary';
 import './InterviewRoom.css';
 
 const InterviewRoom = () => {
@@ -17,6 +20,11 @@ const InterviewRoom = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [alerts, setAlerts] = useState([]);
+  const [speechMetrics, setSpeechMetrics] = useState(null);
+  const [showSummary, setShowSummary] = useState(false);
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const navigate = useNavigate();
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
@@ -26,10 +34,18 @@ const InterviewRoom = () => {
   useEffect(() => {
     const newSocket = io('http://localhost:3000');
     setSocket(newSocket);
+    
+    // Expose socket globally for voice confidence tracking
+    window.interviewSocket = newSocket;
 
     newSocket.on('connect', () => {
       setIsConnected(true);
       newSocket.emit('join-room', { roomId, role, userName });
+      
+      // Start session if interviewer
+      if (role === 'interviewer' && !sessionStarted) {
+        startSession();
+      }
     });
 
     newSocket.on('disconnect', () => {
@@ -54,14 +70,55 @@ const InterviewRoom = () => {
       }
     });
 
+    newSocket.on('real_time_alert', (alert) => {
+      if (role === 'interviewer') {
+        setAlerts(prev => [...prev, alert]);
+      }
+    });
+
+    newSocket.on('speech_metrics', (metrics) => {
+      if (role === 'interviewer') {
+        setSpeechMetrics(metrics);
+      }
+    });
+
     newSocket.on('chat-message', (data) => {
       setChatMessages(prev => [...prev, data]);
     });
 
     return () => {
       newSocket.disconnect();
+      window.interviewSocket = null;
     };
   }, [roomId, role, userName]);
+
+  const startSession = async () => {
+    try {
+      await axios.post('http://localhost:3000/api/session/start', {
+        session_id: roomId,
+        interviewer: userName,
+        interviewee: 'Candidate'
+      });
+      setSessionStarted(true);
+    } catch (error) {
+      console.error('Error starting session:', error);
+    }
+  };
+
+  const endSession = async () => {
+    try {
+      await axios.post('http://localhost:3000/api/session/end', {
+        session_id: roomId
+      });
+      setShowSummary(true);
+    } catch (error) {
+      console.error('Error ending session:', error);
+    }
+  };
+
+  const dismissAlert = (index) => {
+    setAlerts(prev => prev.filter((_, i) => i !== index));
+  };
 
   const sendChatMessage = () => {
     if (newMessage.trim() && socket) {
@@ -93,6 +150,11 @@ const InterviewRoom = () => {
           </div>
         </div>
         <div className="header-right">
+          {role === 'interviewer' && (
+            <button className="end-interview-btn" onClick={endSession}>
+              📊 End & View Summary
+            </button>
+          )}
           <span className={`status-badge ${isConnected ? 'connected' : 'disconnected'}`}>
             <span className="status-dot"></span>
             {isConnected ? 'Connected' : 'Disconnected'}
@@ -158,9 +220,36 @@ const InterviewRoom = () => {
               stressData={stressData}
               onReset={resetAnalysis}
             />
+            {speechMetrics && (
+              <div className="speech-metrics-card">
+                <h4>🗣️ Speech Analysis</h4>
+                <div className="speech-metric">
+                  <span>Speaking Pace:</span>
+                  <strong>{speechMetrics.speaking_pace} WPM</strong>
+                </div>
+                <div className="speech-metric">
+                  <span>Pause Ratio:</span>
+                  <strong>{(speechMetrics.pause_ratio * 100).toFixed(0)}%</strong>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {role === 'interviewer' && alerts.length > 0 && (
+        <AlertContainer alerts={alerts} onDismiss={dismissAlert} />
+      )}
+
+      {showSummary && (
+        <InterviewSummary 
+          sessionId={roomId} 
+          onClose={() => {
+            setShowSummary(false);
+            navigate('/');
+          }} 
+        />
+      )}
     </div>
   );
 };

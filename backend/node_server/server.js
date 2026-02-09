@@ -89,6 +89,26 @@ function handleAIResponse(message) {
                 }
             });
         });
+    } else if (message.type === 'alert') {
+        // Forward alerts to interviewers
+        rooms.forEach((roomData, roomId) => {
+            roomData.participants.forEach(socketId => {
+                const role = userRoles.get(socketId);
+                if (role === 'interviewer') {
+                    io.to(socketId).emit('real_time_alert', message.data);
+                }
+            });
+        });
+    } else if (message.type === 'speech_metrics') {
+        // Forward speech metrics to interviewers
+        rooms.forEach((roomData, roomId) => {
+            roomData.participants.forEach(socketId => {
+                const role = userRoles.get(socketId);
+                if (role === 'interviewer') {
+                    io.to(socketId).emit('speech_metrics', message.data);
+                }
+            });
+        });
     }
 }
 
@@ -192,6 +212,7 @@ io.on('connection', (socket) => {
     // AI Analysis - Video frames
     socket.on('video-frame', (data) => {
         const role = userRoles.get(socket.id);
+        const roomId = Array.from(socket.rooms).find(room => room !== socket.id);
         
         // Only process interviewee's video
         if (role === 'interviewee' && aiWebSocket && aiWebSocket.readyState === WebSocket.OPEN) {
@@ -199,7 +220,8 @@ io.on('connection', (socket) => {
                 type: 'video_frame',
                 data: data.frame,
                 timestamp: data.timestamp || Date.now(),
-                userId: socket.id
+                userId: socket.id,
+                session_id: roomId
             };
             
             aiWebSocket.send(JSON.stringify(message));
@@ -271,6 +293,22 @@ io.on('connection', (socket) => {
         }
     });
     
+    // Voice confidence data forwarding
+    socket.on('voice-confidence-data', (data) => {
+        const roomId = Array.from(socket.rooms).find(room => room !== socket.id);
+        
+        // Forward to AI backend for session tracking
+        if (aiWebSocket && aiWebSocket.readyState === WebSocket.OPEN) {
+            const message = {
+                type: 'voice_confidence',
+                data: data,
+                session_id: roomId,
+                timestamp: data.timestamp || Date.now()
+            };
+            aiWebSocket.send(JSON.stringify(message));
+        }
+    });
+    
     // Handle disconnection
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
@@ -330,6 +368,49 @@ app.get('/api/ai/test', async (req, res) => {
             aiBackendStatus: 'disconnected',
             error: error.message
         });
+    }
+});
+
+// Session management endpoints
+app.post('/api/session/start', async (req, res) => {
+    try {
+        const response = await axios.post(`${AI_BACKEND_URL}/session/start`, req.body);
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/session/end', async (req, res) => {
+    try {
+        const response = await axios.post(`${AI_BACKEND_URL}/session/end`, req.body);
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/session/:sessionId/summary', async (req, res) => {
+    try {
+        const response = await axios.get(`${AI_BACKEND_URL}/session/${req.params.sessionId}/summary`);
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/session/:sessionId/export-pdf', async (req, res) => {
+    try {
+        const response = await axios.post(
+            `${AI_BACKEND_URL}/session/${req.params.sessionId}/export-pdf`,
+            {},
+            { responseType: 'arraybuffer' }
+        );
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=interview_report_${req.params.sessionId}.pdf`);
+        res.send(response.data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
