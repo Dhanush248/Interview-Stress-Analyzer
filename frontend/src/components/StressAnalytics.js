@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './StressAnalytics.css';
 
 const StressAnalytics = ({ stressData, onReset }) => {
@@ -10,63 +10,70 @@ const StressAnalytics = ({ stressData, onReset }) => {
     if (stressData) {
       setCurrentAnalysis(stressData);
       
-      // Add to historical data
       const timestamp = new Date().toLocaleTimeString();
+      const stressLevel = getStressLevelValue(stressData.stress_level);
+      
       const newDataPoint = {
         time: timestamp,
-        stressLevel: getStressLevelValue(stressData.stress_level),
+        stressLevel: stressLevel,
         confidence: Math.round(stressData.confidence_score * 100),
         timestamp: Date.now()
       };
 
       setHistoricalData(prev => {
         const updated = [...prev, newDataPoint];
-        // Keep only last 20 data points
         return updated.slice(-20);
       });
     }
   }, [stressData]);
 
   const getStressLevelValue = (level) => {
-    switch (level) {
-      case 'Low Stress': return 1;
-      case 'Medium Stress': return 2;
-      case 'High Stress': return 3;
-      default: return 0;
-    }
+    if (level === 'Low Stress' || level === 'Medium Stress') return 1;
+    if (level === 'High Stress') return 2;
+    return 0;
   };
 
   const getStressColor = (level) => {
-    switch (level) {
-      case 'Low Stress': return '#4CAF50';
-      case 'Medium Stress': return '#FF9800';
-      case 'High Stress': return '#F44336';
-      default: return '#9E9E9E';
-    }
+    if (level === 'Low Stress' || level === 'Medium Stress') return 'linear-gradient(135deg, #00d2ff, #3a7bd5)';
+    if (level === 'High Stress') return 'linear-gradient(135deg, #ef4444, #dc2626)';
+    return '#9E9E9E';
   };
 
   const getConfidenceColor = (score) => {
-    if (score >= 0.7) return '#4CAF50';
-    if (score >= 0.4) return '#FF9800';
-    return '#F44336';
+    if (score >= 0.6) return 'linear-gradient(135deg, #00d2ff, #3a7bd5)';
+    return 'linear-gradient(135deg, #ef4444, #dc2626)';
   };
 
   const clearHistory = () => {
     setHistoricalData([]);
     setCurrentAnalysis(null);
-    if (onReset) {
-      onReset();
-    }
+    if (onReset) onReset();
+  };
+
+  const displayStressLevel = (level) => {
+    if (level === 'Medium Stress') return 'Low Stress';
+    return level;
   };
 
   if (!currentAnalysis) {
     return (
       <div className="stress-analytics">
         <div className="analytics-header">
-          <h3>AI Stress Analysis</h3>
-          <button onClick={clearHistory} className="reset-btn">Reset</button>
+          <div className="header-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+            </svg>
+            <h3>AI Stress Analysis</h3>
+          </div>
+          <button onClick={clearHistory} className="reset-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4C7.58 4 4.01 7.58 4.01 12C4.01 16.42 7.58 20 12 20C15.73 20 18.84 17.45 19.73 14H17.65C16.83 16.33 14.61 18 12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C13.66 6 15.14 6.69 16.22 7.78L13 11H20V4L17.65 6.35Z" fill="currentColor"/>
+            </svg>
+            Reset
+          </button>
         </div>
         <div className="no-data">
+          <div className="loading-icon">🧠</div>
           <p>Waiting for analysis data...</p>
           <div className="loading-spinner"></div>
         </div>
@@ -74,65 +81,72 @@ const StressAnalytics = ({ stressData, onReset }) => {
     );
   }
 
+  const displayLevel = displayStressLevel(currentAnalysis.stress_level);
+
   return (
     <div className="stress-analytics">
       <div className="analytics-header">
-        <h3>AI Stress Analysis</h3>
-        <button onClick={clearHistory} className="reset-btn">Reset</button>
+        <div className="header-title">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" fill="currentColor"/>
+          </svg>
+          <h3>AI Analysis</h3>
+        </div>
+        <button onClick={clearHistory} className="reset-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4C7.58 4 4.01 7.58 4.01 12C4.01 16.42 7.58 20 12 20C15.73 20 18.84 17.45 19.73 14H17.65C16.83 16.33 14.61 18 12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C13.66 6 15.14 6.69 16.22 7.78L13 11H20V4L17.65 6.35Z" fill="currentColor"/>
+          </svg>
+          Reset
+        </button>
       </div>
 
-      {/* Current Status */}
       <div className="current-status">
-        <div className="status-card">
-          <h4>Current Stress Level</h4>
-          <div 
-            className="stress-indicator"
-            style={{ backgroundColor: getStressColor(currentAnalysis.stress_level) }}
-          >
-            {currentAnalysis.stress_level}
-          </div>
-        </div>
-
-        <div className="status-card">
-          <h4>Confidence Score</h4>
-          <div 
-            className="confidence-indicator"
-            style={{ backgroundColor: getConfidenceColor(currentAnalysis.confidence_score) }}
-          >
-            {Math.round(currentAnalysis.confidence_score * 100)}%
-          </div>
-        </div>
-
-        <div className="status-card">
-          <h4>Detection Status</h4>
-          <div className="detection-status">
-            <div className={`status-item ${currentAnalysis.face_detected ? 'active' : 'inactive'}`}>
-              👤 Face: {currentAnalysis.face_detected ? 'Detected' : 'Not Detected'}
+        <div className="status-card stress-card">
+          <div className="card-icon">🧠</div>
+          <div className="card-content">
+            <h4>Stress Level</h4>
+            <div 
+              className="stress-indicator"
+              style={{ background: getStressColor(currentAnalysis.stress_level) }}
+            >
+              {displayLevel}
             </div>
-            <div className={`status-item ${currentAnalysis.audio_processed ? 'active' : 'inactive'}`}>
-              🎤 Audio: {currentAnalysis.audio_processed ? 'Processing' : 'No Audio'}
+          </div>
+        </div>
+
+        <div className="status-card confidence-card">
+          <div className="card-icon">🎯</div>
+          <div className="card-content">
+            <h4>Confidence</h4>
+            <div 
+              className="confidence-indicator"
+              style={{ background: getConfidenceColor(currentAnalysis.confidence_score) }}
+            >
+              {Math.round(currentAnalysis.confidence_score * 100)}%
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stress Probability Distribution */}
       <div className="probability-section">
-        <h4>Stress Level Probabilities</h4>
+        <h4>📊 Live Stress Detection</h4>
         <div className="probability-bars">
-          {currentAnalysis.stress_probability.map((prob, index) => {
-            const labels = ['Low Stress', 'Medium Stress', 'High Stress'];
-            const colors = ['#4CAF50', '#FF9800', '#F44336'];
+          {currentAnalysis.stress_probability && currentAnalysis.stress_probability.map((prob, index) => {
+            if (index === 1) return null; // Skip Medium Stress
+            const labels = ['Low Stress', 'High Stress'];
+            const colors = ['#00d2ff', '#ef4444'];
+            const displayIndex = index === 0 ? 0 : 1;
             
             return (
               <div key={index} className="probability-bar">
-                <div className="bar-label">{labels[index]}</div>
+                <div className="bar-label">{labels[displayIndex]}</div>
                 <div className="bar-container">
                   <div 
                     className="bar-fill"
                     style={{ 
                       width: `${prob * 100}%`,
-                      backgroundColor: colors[index]
+                      background: `linear-gradient(135deg, ${colors[displayIndex]}, ${colors[displayIndex]}dd)`,
+                      transition: 'width 0.5s ease'
                     }}
                   ></div>
                 </div>
@@ -143,111 +157,79 @@ const StressAnalytics = ({ stressData, onReset }) => {
         </div>
       </div>
 
-      {/* Historical Charts */}
-      {historicalData.length > 1 && (
-        <div className="charts-section">
-          <div className="chart-container">
-            <h4>Stress Level Over Time</h4>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={historicalData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis domain={[0, 3]} tickFormatter={(value) => {
-                  const labels = ['', 'Low', 'Medium', 'High'];
-                  return labels[value] || '';
-                }} />
-                <Tooltip formatter={(value) => {
-                  const labels = ['Unknown', 'Low Stress', 'Medium Stress', 'High Stress'];
-                  return [labels[value] || 'Unknown', 'Stress Level'];
-                }} />
-                <Line 
-                  type="monotone" 
-                  dataKey="stressLevel" 
-                  stroke="#FF6B6B" 
-                  strokeWidth={2}
-                  dot={{ fill: '#FF6B6B', strokeWidth: 2, r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+      <div className="detection-card">
+        <h4>🔍 Detection Status</h4>
+        <div className="detection-grid">
+          <div className={`detection-item ${currentAnalysis.face_detected ? 'active' : 'inactive'}`}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12Z" fill="currentColor"/>
+            </svg>
+            <span>Face {currentAnalysis.face_detected ? 'Detected' : 'Not Found'}</span>
           </div>
-
-          <div className="chart-container">
-            <h4>Confidence Score Over Time</h4>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={historicalData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis domain={[0, 100]} />
-                <Tooltip formatter={(value) => [`${value}%`, 'Confidence']} />
-                <Line 
-                  type="monotone" 
-                  dataKey="confidence" 
-                  stroke="#4ECDC4" 
-                  strokeWidth={2}
-                  dot={{ fill: '#4ECDC4', strokeWidth: 2, r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className={`detection-item ${currentAnalysis.audio_processed ? 'active' : 'inactive'}`}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" fill="currentColor"/>
+            </svg>
+            <span>Audio {currentAnalysis.audio_processed ? 'Processing' : 'Inactive'}</span>
           </div>
-        </div>
-      )}
-
-      {/* Analysis Summary */}
-      <div className="analysis-summary">
-        <h4>Analysis Summary</h4>
-        <div className="summary-stats">
-          <div className="stat-item">
-            <span className="stat-label">Total Readings:</span>
-            <span className="stat-value">{historicalData.length}</span>
-          </div>
-          {historicalData.length > 0 && (
-            <>
-              <div className="stat-item">
-                <span className="stat-label">Avg Confidence:</span>
-                <span className="stat-value">
-                  {Math.round(historicalData.reduce((sum, item) => sum + item.confidence, 0) / historicalData.length)}%
-                </span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Session Duration:</span>
-                <span className="stat-value">
-                  {historicalData.length > 1 
-                    ? Math.round((historicalData[historicalData.length - 1].timestamp - historicalData[0].timestamp) / 1000 / 60)
-                    : 0} min
-                </span>
-              </div>
-            </>
-          )}
         </div>
       </div>
 
-      {/* Recommendations */}
-      <div className="recommendations">
-        <h4>Recommendations</h4>
+      {historicalData.length > 1 && (
+        <div className="chart-card">
+          <h4>📈 Stress Trend</h4>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={historicalData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="time" tick={{fontSize: 11}} stroke="#94a3b8" />
+              <YAxis domain={[0, 2]} ticks={[1, 2]} tickFormatter={(value) => value === 1 ? 'Low' : 'High'} tick={{fontSize: 11}} stroke="#94a3b8" />
+              <Tooltip formatter={(value) => [value === 1 ? 'Low Stress' : 'High Stress', 'Level']} />
+              <Line type="monotone" dataKey="stressLevel" stroke="#00d2ff" strokeWidth={3} dot={{ fill: '#00d2ff', r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {historicalData.length > 1 && (
+        <div className="chart-card">
+          <h4>💪 Confidence Trend</h4>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={historicalData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="time" tick={{fontSize: 11}} stroke="#94a3b8" />
+              <YAxis domain={[0, 100]} tick={{fontSize: 11}} stroke="#94a3b8" />
+              <Tooltip formatter={(value) => [`${value}%`, 'Confidence']} />
+              <Line type="monotone" dataKey="confidence" stroke="#00d2ff" strokeWidth={3} dot={{ fill: '#00d2ff', r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <div className="recommendations-card">
+        <h4>💡 Insights</h4>
         <div className="recommendation-list">
           {currentAnalysis.stress_level === 'High Stress' && (
-            <div className="recommendation high-stress">
-              ⚠️ High stress detected. Consider taking a short break or asking easier questions.
+            <div className="recommendation high">
+              <span className="rec-icon">⚠️</span>
+              <span>High stress detected. Consider a short break.</span>
             </div>
           )}
           {currentAnalysis.confidence_score < 0.3 && (
-            <div className="recommendation low-confidence">
-              💡 Low confidence detected. Try encouraging the candidate or providing more context.
+            <div className="recommendation low">
+              <span className="rec-icon">💬</span>
+              <span>Low confidence. Try encouraging questions.</span>
             </div>
           )}
           {!currentAnalysis.face_detected && (
-            <div className="recommendation technical">
-              📹 Face not detected. Ask the candidate to adjust their camera position.
+            <div className="recommendation warning">
+              <span className="rec-icon">📹</span>
+              <span>Face not detected. Check camera position.</span>
             </div>
           )}
-          {!currentAnalysis.audio_processed && (
-            <div className="recommendation technical">
-              🎤 Audio not being processed. Check microphone settings.
-            </div>
-          )}
-          {currentAnalysis.stress_level === 'Low Stress' && currentAnalysis.confidence_score > 0.7 && (
+          {displayLevel === 'Low Stress' && currentAnalysis.confidence_score > 0.7 && (
             <div className="recommendation positive">
-              ✅ Candidate appears comfortable and confident. Good interview flow!
+              <span className="rec-icon">✅</span>
+              <span>Great! Candidate is comfortable and confident.</span>
             </div>
           )}
         </div>

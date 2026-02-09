@@ -24,35 +24,23 @@ const InterviewRoom = () => {
   const localStreamRef = useRef();
 
   useEffect(() => {
-    // Initialize socket connection
     const newSocket = io('http://localhost:3000');
     setSocket(newSocket);
 
-    // Socket event listeners
     newSocket.on('connect', () => {
       setIsConnected(true);
-      console.log('Connected to server');
-      
-      // Join room
-      newSocket.emit('join-room', {
-        roomId,
-        role,
-        userName
-      });
+      newSocket.emit('join-room', { roomId, role, userName });
     });
 
     newSocket.on('disconnect', () => {
       setIsConnected(false);
-      console.log('Disconnected from server');
     });
 
     newSocket.on('user-joined', (data) => {
-      console.log('User joined:', data);
       setParticipants(prev => [...prev, data]);
     });
 
     newSocket.on('user-left', (data) => {
-      console.log('User left:', data);
       setParticipants(prev => prev.filter(p => p.socketId !== data.socketId));
     });
 
@@ -60,7 +48,6 @@ const InterviewRoom = () => {
       setParticipants(data);
     });
 
-    // AI Analysis results (only for interviewers)
     newSocket.on('stress_analysis', (data) => {
       if (role === 'interviewer') {
         setStressData(data.data);
@@ -78,10 +65,10 @@ const InterviewRoom = () => {
 
   const sendChatMessage = () => {
     if (newMessage.trim() && socket) {
-      socket.emit('chat-message', { message: newMessage });
+      socket.emit('chat-message', { message: newMessage, userName: userName });
       setChatMessages(prev => [...prev, {
         message: newMessage,
-        sender: 'You',
+        sender: userName,
         timestamp: Date.now()
       }]);
       setNewMessage('');
@@ -98,17 +85,62 @@ const InterviewRoom = () => {
   return (
     <div className="interview-room">
       <div className="room-header">
-        <h2>Interview Room: {roomId}</h2>
-        <div className="user-info">
-          <span>{userName} ({role})</span>
-          <span className={`status ${isConnected ? 'connected' : 'disconnected'}`}>
+        <div className="header-left">
+          <div className="room-icon">🎯</div>
+          <div>
+            <h2>Room: {roomId}</h2>
+            <span className="room-subtitle">{userName} • {role}</span>
+          </div>
+        </div>
+        <div className="header-right">
+          <span className={`status-badge ${isConnected ? 'connected' : 'disconnected'}`}>
+            <span className="status-dot"></span>
             {isConnected ? 'Connected' : 'Disconnected'}
           </span>
         </div>
       </div>
 
       <div className="room-content">
-        <div className="video-section">
+        <div className="left-panel">
+          <div className="chat-section">
+            <div className="chat-header">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="currentColor"/>
+              </svg>
+              <h3>Chat</h3>
+            </div>
+            <div className="chat-messages">
+              {chatMessages.map((msg, index) => (
+                <div key={index} className={`chat-message ${msg.sender === userName ? 'own' : 'other'}`}>
+                  <div className="message-avatar">{msg.sender.charAt(0).toUpperCase()}</div>
+                  <div className="message-content">
+                    <div className="message-header">
+                      <span className="sender-name">{msg.sender}</span>
+                      <span className="message-time">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div className="message-text">{msg.message}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="chat-input">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                placeholder="Type a message..."
+              />
+              <button onClick={sendChatMessage} className="send-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="center-panel">
           <VideoCall
             socket={socket}
             role={role}
@@ -121,40 +153,13 @@ const InterviewRoom = () => {
         </div>
 
         {role === 'interviewer' && (
-          <div className="analytics-section">
+          <div className="right-panel">
             <StressAnalytics 
               stressData={stressData}
               onReset={resetAnalysis}
             />
           </div>
         )}
-
-        <div className="chat-section">
-          <div className="chat-header">
-            <h3>Chat</h3>
-          </div>
-          <div className="chat-messages">
-            {chatMessages.map((msg, index) => (
-              <div key={index} className="chat-message">
-                <span className="sender">{msg.sender}:</span>
-                <span className="message">{msg.message}</span>
-                <span className="timestamp">
-                  {new Date(msg.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="chat-input">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-              placeholder="Type a message..."
-            />
-            <button onClick={sendChatMessage}>Send</button>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -34,7 +34,8 @@ let aiWebSocket = null;
 
 // Room management
 const rooms = new Map();
-const userRoles = new Map(); // Track user roles (interviewer/interviewee)
+const userRoles = new Map();
+const userNames = new Map(); // Store user names
 
 // Connect to AI backend WebSocket
 function connectToAIBackend() {
@@ -119,8 +120,11 @@ io.on('connection', (socket) => {
     socket.on('join-room', (data) => {
         const { roomId, role, userName } = data;
         
-        // Store user role
+        // Store user role and name
         userRoles.set(socket.id, role);
+        userNames.set(socket.id, userName);
+        console.log(`Stored userName for ${socket.id}: ${userName}`);
+        console.log(`Current userNames map:`, Array.from(userNames.entries()));
         
         // Join socket room
         socket.join(roomId);
@@ -253,15 +257,17 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Chat messages
     socket.on('chat-message', (data) => {
         const roomId = Array.from(socket.rooms).find(room => room !== socket.id);
+        const senderName = userNames.get(socket.id) || 'Unknown';
+        console.log(`Chat message from ${socket.id}: senderName=${senderName}, data.userName=${data.userName}`);
         if (roomId) {
             socket.to(roomId).emit('chat-message', {
                 message: data.message,
-                sender: socket.id,
+                sender: senderName,
                 timestamp: Date.now()
             });
+            console.log(`Sent chat message to room ${roomId}: sender=${senderName}`);
         }
     });
     
@@ -288,8 +294,9 @@ io.on('connection', (socket) => {
             }
         });
         
-        // Clean up user role
+        // Clean up user role and name
         userRoles.delete(socket.id);
+        userNames.delete(socket.id);
     });
 });
 
